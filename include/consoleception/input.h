@@ -1,10 +1,14 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#define INPUTS_LIMIT 8
+#include <curses.h>
+#include <vector>
+#include <algorithm>
 
 namespace Input
 {
+	const unsigned char INPUTS_LIMIT = 8;
+
 	/**
 	 * This function initializes input related settings and should be called
 	 * in the start of the main program.

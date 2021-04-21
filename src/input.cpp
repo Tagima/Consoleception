@@ -1,141 +1,102 @@
-#include <curses.h>
-
 #include "consoleception/input.h"
 
 namespace Input
 {
-	int* _prsdKeys;
-	int* _lastKeys;
-	int* _heldKeys;
-	int* _rlsdKeys;
-	char _prsdKeysSize;
-	char _lastKeysSize;
-	char _heldKeysSize;
-	char _rlsdKeysSize;
+	std::vector<int> m_prsdKeys;
+	std::vector<int> m_lastKeys;
+	std::vector<int> m_heldKeys;
+	std::vector<int> m_rlsdKeys;
 
 	void initializeInput()
 	{
 		// Initializing ncurses settings
 
+		nonl();
 		noecho(); // Avoid printing the typed character on screen
 		nodelay(stdscr, TRUE); // Make the program not freeze when getch() is called
 		keypad(stdscr, TRUE); // Include special characters in getch() queue
-
-		_prsdKeys = new int[INPUTS_LIMIT];
-		_lastKeys = new int[INPUTS_LIMIT];
-		_heldKeys = new int[INPUTS_LIMIT];
-		_rlsdKeys = new int[INPUTS_LIMIT];
-
-		_prsdKeysSize = _lastKeysSize = _heldKeysSize = _rlsdKeysSize = 0;
 	}
 
 	void updateInput()
 	{
-		// Updating last keys array
+		// Updating last keys vector
 
-		for (char i = 0; i < _heldKeysSize; ++i)
-		{
-			_lastKeys[i] = _heldKeys[i];
-		}
-		_lastKeysSize = _heldKeysSize;
+		m_lastKeys = m_heldKeys;
 
-		// Updating held keys array
+		// Updating held keys vector
+
+		m_heldKeys.clear();
 
 		for (char i = 0; i < INPUTS_LIMIT; ++i)
 		{
 			int key = getch();
 			if (key == ERR)
 			{
-				_heldKeysSize = i;
 				break;
 			}
-			_heldKeys[i] = key;
+			m_heldKeys.push_back(key);
 		}
 
 		flushinp(); // Avoid that inputs in queue get read in next frame
 
-		// Updating released keys array
+		// Updating released keys vector
 
-		_rlsdKeysSize = 0;
+		m_rlsdKeys.clear();
 
-		for (char i = 0; i < _lastKeysSize; ++i)
+		for (char i = 0; i < m_lastKeys.size(); ++i)
 		{
-			bool released = true;
-			for (char j = 0; j < _heldKeysSize; ++j)
+			// Check if current lastKey does not exist in heldKeys vector
+			std::vector<int>::iterator it = find(
+				m_heldKeys.begin(), m_heldKeys.end(), m_lastKeys[i]);
+			if (it == m_heldKeys.end())
 			{
-				if (_lastKeys[i] == _heldKeys[j])
-				{
-					released = false;
-					break;
-				}
-			}
-			if (released == true)
-			{
-				_rlsdKeys[_rlsdKeysSize++] = _lastKeys[i];
+				m_rlsdKeys.push_back(m_lastKeys[i]);
 			}
 		}
 
-		// Updating pressed keys array
+		// Updating pressed keys vector
 
-		_prsdKeysSize = 0;
+		m_prsdKeys.clear();
 
-		for (char i = 0; i < _heldKeysSize; ++i)
+		for (char i = 0; i < m_heldKeys.size(); ++i)
 		{
-			bool pressed = true;
-			for (char j = 0; j < _lastKeysSize; ++j)
+			// Check if current heldKey does not exist in lastKeys vector
+			std::vector<int>::iterator it = find(
+				m_lastKeys.begin(), m_lastKeys.end(), m_heldKeys[i]);
+			if (it == m_lastKeys.end())
 			{
-				if (_heldKeys[i] == _lastKeys[j])
-				{
-					pressed = false;
-					break;
-				}
-			}
-			if (pressed == true)
-			{
-				_prsdKeys[_prsdKeysSize++] = _heldKeys[i];
+				m_prsdKeys.push_back(m_heldKeys[i]);
 			}
 		}
 	}
 
 	bool getKeyHeld(int key)
 	{
-		// Check if given key exists in _heldKeys
+		// Check if given key exists in m_heldKeys
 
-		for (char i = 0; i < _heldKeysSize; ++i)
-		{
-			if (_heldKeys[i] == key)
-			{
-				return true;
-			}
-		}
-		return false;
+		std::vector<int>::iterator it = find(
+			m_heldKeys.begin(), m_heldKeys.end(), key);
+
+		return (it != m_heldKeys.end());
 	}
 
 	bool getKeyPressed(int key)
 	{
-		// Check if given key exists in _prsdKeys
+		// Check if given key exists in m_prsdKeys
 
-		for (char i = 0; i < _prsdKeysSize; ++i)
-		{
-			if (_prsdKeys[i] == key)
-			{
-				return true;
-			}
-		}
-		return false;
+		std::vector<int>::iterator it = find(
+			m_prsdKeys.begin(), m_prsdKeys.end(), key);
+
+		return (it != m_prsdKeys.end());
 	}
 
 	bool getKeyReleased(int key)
 	{
-		// Check if given key exists in _rlsdKeys
+		// Check if given key exists in m_rlsdKeys
 
-		for (char i = 0; i < _rlsdKeysSize; ++i)
-		{
-			if (_rlsdKeys[i] == key)
-			{
-				return true;
-			}
-		}
-		return false;
+		std::vector<int>::iterator it = find(
+			m_rlsdKeys.begin(), m_rlsdKeys.end(), key);
+
+		return (it != m_rlsdKeys.end());
 	}
 }
